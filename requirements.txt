@@ -1,0 +1,9 @@
+altair
+flask
+gunicorn
+matplotlib
+networkx
+pandas
+scikit-learn
+seaborn
+joblib

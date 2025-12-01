@@ -1,0 +1,444 @@
+<<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <meta name="description" content="" />
+    <meta name="author" content="Bootstrap contributors + you" />
+    <title>Dog Movement Analysis</title>
+
+    <!-- Bootstrap CSS via CDN -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+
+    <!-- Your custom CSS -->
+    <link
+      href="{{ url_for('static', filename='css/dashboard.css') }}"
+      rel="stylesheet"
+    />
+
+    <meta name="theme-color" content="#712cf9" />
+
+    <style>
+      .bd-placeholder-img {
+        font-size: 1.125rem;
+        text-anchor: middle;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        user-select: none;
+      }
+
+      @media (min-width: 768px) {
+        .bd-placeholder-img-lg {
+          font-size: 3.5rem;
+        }
+      }
+
+      .b-example-divider {
+        width: 100%;
+        height: 3rem;
+        background-color: #0000001a;
+        border: solid rgba(0, 0, 0, 0.15);
+        border-width: 1px 0;
+        box-shadow:
+          inset 0 0.5em 1.5em #0000001a,
+          inset 0 0.125em 0.5em #00000026;
+      }
+
+      .b-example-vr {
+        flex-shrink: 0;
+        width: 1.5rem;
+        height: 100vh;
+      }
+
+      .bi {
+        vertical-align: -0.125em;
+        fill: currentColor;
+      }
+
+      .nav-scroller {
+        position: relative;
+        z-index: 2;
+        height: 2.75rem;
+        overflow-y: hidden;
+      }
+
+      .nav-scroller .nav {
+        display: flex;
+        flex-wrap: nowrap;
+        padding-bottom: 1rem;
+        margin-top: -1px;
+        overflow-x: auto;
+        text-align: center;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Simple dark navbar -->
+    <header
+      class="navbar sticky-top bg-dark flex-md-nowrap p-0 shadow"
+      data-bs-theme="dark"
+    >
+      <a
+        class="navbar-brand col-md-3 col-lg-2 me-0 px-3 fs-6 text-white"
+        href="{{ url_for('home') }}"
+      >
+        Dog Movement Analysis
+      </a>
+      <div class="navbar-nav">
+        <div class="nav-item text-nowrap">
+          <span class="nav-link px-3 text-white">Welcome Dog Lovers</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="container-fluid">
+      <div class="row">
+        <!-- Sidebar -->
+        <nav
+          id="sidebarMenu"
+          class="col-md-3 col-lg-2 d-md-block bg-body-tertiary sidebar collapse"
+        >
+          <div class="position-sticky pt-3 sidebar-sticky">
+            <ul class="nav flex-column">
+              <li class="nav-item">
+                <p>
+                  Explore how dogs move between states and shelters using the following dashboards.
+                </p>
+                <a
+                  class="nav-link {% if active_page == 'state' %}active{% endif %}"
+                  aria-current="page"
+                  href="{{ url_for('state_dashboard') }}"
+                >
+                  State Representative Dashboard
+                </a>
+              </li>
+              <li class="nav-item">
+                <a
+                  class="nav-link {% if active_page == 'shelter' %}active{% endif %}"
+                  href="{{ url_for('shelter_dashboard') }}"
+                >
+                  Animal Shelter Dashboard
+                </a>
+              </li>
+            </ul>
+          </div>
+        </nav>
+
+        <!-- Main content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+          <div
+            class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom"
+          >
+            <h1 class="h2">Animal Shelter Dashboard</h1>
+          </div>
+
+          <!-- State-level chart(s) go here -->
+          <section class="mb-5">
+            <p class="lead">
+                Explore shelter-level performance, intake, and adoption trends to better
+                understand local needs and opportunities.
+            </p>
+            <div class="dropdown mb-4">
+              <button
+                class="btn btn-primary dropdown-toggle"
+                type="button"
+                id="shelterDropdownBtn"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                Select Your Shelter
+              </button>
+            
+              <div class="dropdown-menu p-3" style="width: 300px;" aria-labelledby="shelterDropdownBtn">
+                <!-- Search bar inside dropdown -->
+                <input
+                  type="text"
+                  id="shelterSearchInput"
+                  class="form-control mb-2"
+                  placeholder="Search shelters..."
+                />
+            
+                <div id="shelterListContainer" style="max-height: 250px; overflow-y: auto;">
+                  
+                </div>
+            
+                <hr/>
+                <button class="btn btn-sm btn-outline-secondary w-100" id="resetShelterFilter">
+                  Reset to All Shelters
+                </button>
+              </div>
+            </div>
+            
+            <div id="selectedShelterLabel" class="text-muted mb-3">
+              Showing all shelters
+            </div>
+            
+            <!-- Summary carousel -->
+            <div id="shelterCarousel" class="carousel slide mb-4" data-bs-ride="carousel">
+              <div class="carousel-inner">
+            
+                <!-- Slide 1: total dogs -->
+                <div class="carousel-item active">
+                  <div class="card text-center">
+                    <div class="card-body">
+                      <h5 class="card-title mb-2">Total Dogs in Selection</h5>
+                      <p class="display-5 mb-0" id="totalDogsCount">0</p>
+                      <p class="text-muted mb-0" id="carouselShelterLabel">All shelters</p>
+                    </div>
+                  </div>
+                </div>
+            
+                <!-- Slide 2: top 3 Found locations -->
+                <div class="carousel-item">
+                  <div class="card">
+                    <div class="card-body">
+                      <h5 class="card-title mb-3">Top 3 Source Locations (Found)</h5>
+                      <ul class="list-group list-group-flush" id="topStatesList">
+                        <!-- JS will insert <li> items here -->
+                      </ul>
+                      <p class="text-muted small mt-2 mb-0">
+                        Based on the <code>Found</code> field in your data.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+            
+              </div>
+            
+              <button class="carousel-control-prev" type="button" data-bs-target="#shelterCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+              </button>
+              <button class="carousel-control-next" type="button" data-bs-target="#shelterCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+              </button>
+            </div>
+
+            <!-- Dog Cards Section -->
+            <h4 class="mt-4 mb-3">Dogs in Shelter</h4>
+            <div id="dogCardsContainer" class="row g-3 mb-3"></div>
+            <div id="dogCardsPager" class="d-flex justify-content-end align-items-center gap-2 mb-5"></div>
+            
+            <div class="row g-4 mb-4">
+
+              <!-- Breed Composition (left column) -->
+              <div class="col-md-6">
+                <section class="h-100">
+                  <h4 class="mt-3 mb-2">Breed Composition</h4>
+                  <div id="breedBarChartContainer" class="border rounded bg-white p-3">
+                    <svg id="breedBarChart" width="100%" height="320"></svg>
+                  </div>
+                </section>
+              </div>
+            
+              <!-- Breed Similarity Network (right column) -->
+              <div class="col-md-6">
+                <section class="h-100">
+                  <h4 class="mt-3 mb-2">Breed Similarity Network</h4>
+                  <div id="breedForceContainer" class="border rounded bg-white p-3">
+                    <svg id="breedForce" width="100%" height="360"></svg>
+                  </div>
+                </section>
+              </div>
+            
+            </div>
+            
+            
+
+            <section class="mb-4">
+              <h4 class="mt-3 mb-2">Dog Origins</h4>
+            
+              <div class="row g-4">
+                <!-- Left: Sankey -->
+                <div class="col-md-6">
+                  <div id="originSankeyContainer" class="border rounded bg-white p-3">
+                    <svg id="originSankey" width="100%" height="320"></svg>
+                  </div>
+                </div>
+            
+                <!-- Right: Treemap -->
+                <div class="col-md-6">
+                  <div id="originTreemapContainer" class="border rounded bg-white p-3">
+                    <svg id="originTreemap" width="100%" height="320"></svg>
+                  </div>
+                </div>
+              </div>
+            </section>
+            
+
+            <!-- User Preference Form for ML Recommender -->
+<section class="mb-4">
+  <h3>Find Your Match</h3>
+  <p class="text-muted small">
+    Tell us a bit about what you’re looking for and we’ll suggest some dogs.
+  </p>
+
+  <form id="matchForm" class="row g-2 align-items-end">
+    <!-- Age -->
+    <div class="col-6 col-md-3">
+      <label for="pref_age" class="form-label mb-1">Age</label>
+      <select class="form-select form-select-sm" id="pref_age" name="age">
+        <option value="">Any</option>
+        <option value="Baby">Baby</option>
+        <option value="Young">Young</option>
+        <option value="Adult">Adult</option>
+        <option value="Senior">Senior</option>
+      </select>
+    </div>
+
+    <!-- Size -->
+    <div class="col-6 col-md-3">
+      <label for="pref_size" class="form-label mb-1">Size</label>
+      <select class="form-select form-select-sm" id="pref_size" name="size">
+        <option value="">Any</option>
+        <option value="Small">Small</option>
+        <option value="Medium">Medium</option>
+        <option value="Large">Large</option>
+        <option value="XLarge">Extra Large</option>
+      </select>
+    </div>
+
+    <!-- Sex -->
+    <div class="col-6 col-md-3">
+      <label for="pref_sex" class="form-label mb-1">Sex</label>
+      <select class="form-select form-select-sm" id="pref_sex" name="sex">
+        <option value="">Any</option>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+      </select>
+    </div>
+
+    <!-- Coat -->
+    <div class="col-6 col-md-3">
+      <label for="pref_coat" class="form-label mb-1">Coat</label>
+      <select class="form-select form-select-sm" id="pref_coat" name="coat">
+        <option value="">Any</option>
+        <option value="Short">Short</option>
+        <option value="Medium">Medium</option>
+        <option value="Long">Long</option>
+        <option value="Curly">Curly</option>
+        <option value="Long">Wire</option>
+        <option value="Long">Hariless</option>
+      </select>
+    </div>
+
+    <!-- Good with kids -->
+    <div class="col-6 col-md-3">
+      <label class="form-label mb-1">Good with kids</label>
+      <select class="form-select form-select-sm" name="env_children">
+        <option value="">Doesn’t matter</option>
+        <option value="1">Yes</option>
+        <option value="0">No / not sure</option>
+      </select>
+    </div>
+
+    <!-- Good with dogs -->
+    <div class="col-6 col-md-3">
+      <label class="form-label mb-1">Good with other dogs</label>
+      <select class="form-select form-select-sm" name="env_dogs">
+        <option value="">Doesn’t matter</option>
+        <option value="1">Yes</option>
+        <option value="0">No / not sure</option>
+      </select>
+    </div>
+
+    <!-- Good with cats -->
+    <div class="col-6 col-md-3">
+      <label class="form-label mb-1">Good with cats</label>
+      <select class="form-select form-select-sm" name="env_cats">
+        <option value="">Doesn’t matter</option>
+        <option value="1">Yes</option>
+        <option value="0">No / not sure</option>
+      </select>
+    </div>
+
+    <!-- House trained -->
+    <div class="col-6 col-md-3">
+      <label class="form-label mb-1">House trained</label>
+      <select class="form-select form-select-sm" name="house_trained">
+        <option value="">Doesn’t matter</option>
+        <option value="1">Yes</option>
+        <option value="0">No / not sure</option>
+      </select>
+    </div>
+
+    <!-- Special needs -->
+    <div class="col-6 col-md-3">
+      <label class="form-label mb-1">Special needs OK?</label>
+      <select class="form-select form-select-sm" name="special_needs">
+        <option value="">Doesn’t matter</option>
+        <option value="1">Yes</option>
+        <option value="0">Prefer not</option>
+      </select>
+    </div>
+
+    <!-- Mixed breed -->
+    <div class="col-6 col-md-3">
+      <label class="form-label mb-1">Mixed breed OK?</label>
+      <select class="form-select form-select-sm" name="breed_mixed">
+        <option value="">Doesn’t matter</option>
+        <option value="1">Yes</option>
+        <option value="0">Prefer purebred</option>
+      </select>
+    </div>
+
+    
+
+    <!-- Submit -->
+    <div class="col-12 col-md-2 text-md-end">
+      <button type="submit" class="btn btn-sm btn-primary w-100 mt-2 mt-md-0">
+        Find my dog
+      </button>
+    </div>
+  </form>
+
+  <div id="matchResults" class="mt-3">
+    <p class="text-muted small">
+      Fill out your preferences and click <strong>Find my dog</strong> to see suggested matches.
+    </p>
+  </div>
+</section>
+            
+            <!-- D3 table will be injected here -->
+            <!-- <div id="state-table"></div>? -->
+            
+          </section>
+        </main>
+      </div> <!-- /.row -->
+    </div> <!-- /.container-fluid -->
+
+    <!-- Bootstrap JS bundle via CDN -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      crossorigin="anonymous"
+    ></script>
+
+    <!-- D3 -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- D3 Sankey plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+
+
+    <script>
+      window.shelter_data = {{ shelter_data | tojson }};
+      // Base folder for dog images
+      window.dog_image_base = "{{ url_for('static', filename='images') }}/";
+    </script>
+    
+    <!-- Use shelter.js, not main.js, for this dashboard -->
+    <script src="{{ url_for('static', filename='js/shelter.js') }}"></script>
+    
+  </body>
+</html>
